@@ -3393,7 +3393,7 @@ public class IndicatorsCountMB {
                     + " naturaleza_violencia not like '%>7}' AND "//no sea sin dato
                     + " naturaleza_violencia not like '%>8}' ";//no sea otro
         }
-        //System.out.println("CONSULTA (indicators count) \n " + sqlReturn);
+        System.out.println("CONSULTA (indicators count) \n " + sqlReturn);
         return sqlReturn;
     }
 
