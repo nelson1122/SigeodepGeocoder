@@ -419,6 +419,11 @@
             <from-outcome>closures</from-outcome>
             <to-view-id>/web/configurations/closures.xhtml</to-view-id>
             <redirect/>
-        </navigation-case>                          
+        </navigation-case>
+        <navigation-case>
+            <from-outcome>geocodeInjuries</from-outcome>
+            <to-view-id>/web/geocoder/geocodeInjuries.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>                           
     </navigation-rule>    
 </faces-config>

@@ -149,6 +149,9 @@ public class IndicatorsCountMB {
     private boolean showItems = true;
     private boolean showEmpty = false;
     private boolean showGeo = false;//mostrar seccion de mapas
+    
+    private boolean showAddressGeo = false; //mostrar seccion de georreferenciacion con direcciones
+    
     private boolean showGraphic = false;//mostrar seccion de graficos
     private boolean showTableResult = false;//mostrar tabla de resultados
     private Integer tuplesProcessed = 0;
@@ -341,6 +344,7 @@ public class IndicatorsCountMB {
         showTableResult = false;
         btnExportDisabled = true;
         showGeo = false;
+        showAddressGeo = false;
         variablesCrossData = new ArrayList<>();//lista de variables a cruzar            
         boolean continueProcess = true;
         message = null;
@@ -477,6 +481,12 @@ public class IndicatorsCountMB {
                         loadGeo = true;
                         showGeo = true;
                     }
+                    
+                    if (var.getName().compareToIgnoreCase("barrio") == 0
+                            || var.getName().compareToIgnoreCase("comuna") == 0) {
+                        showAddressGeo = true;
+                    }
+                    
                 }
                 if (loadGeo) {//cuadrante comuna barrio corredor(solo entre aqui  )            
                     
@@ -4140,4 +4150,14 @@ public class IndicatorsCountMB {
     public void setShowTableResult(boolean showTableResult) {
         this.showTableResult = showTableResult;
     }
+    
+    //seccion de geocodificacion con direcciones
+    public boolean isShowAddressGeo() {
+        return showAddressGeo;
+    }
+
+    public void setShowAddressGeo(boolean showAddressGeo) {
+        this.showAddressGeo = showAddressGeo;
+    }
+    
 }

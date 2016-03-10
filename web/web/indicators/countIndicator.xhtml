@@ -13,7 +13,7 @@
             <link href="../../resources/css/style.css" rel="stylesheet" type="text/css" />
             <script>
                 //function to support scrolling of title and first column
-                fnScroll = function() {
+                fnScroll = function () {
                     $('#divHeader').scrollLeft($('#table_div').scrollLeft());
                     $('#firstcol').scrollTop($('#table_div').scrollTop());
                 };
@@ -435,6 +435,10 @@
                             <br/>
                             <div id="mainpanel"></div>
                             <br/>
+
+                        </p:fieldset>
+                        <p:fieldset legend="DIRECCIONES" rendered="#{indicatorsCountMB.showAddressGeo}">
+                            <h:commandButton styleClass="ui-widget-header ui-corner-all" style="width: 140px; height: 30px;" value="Generar Mapa" action="geocodeInjuries" />
                         </p:fieldset>
                     </h:form>
                 </p:tab>
