@@ -39,6 +39,8 @@ import javax.faces.context.FacesContext;
 import managedBeans.geo2.GeoDBConnection;
 import managedBeans.login.LoginMB;
 import beans.util.SpanColumns;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import model.dao.IndicatorsConfigurationsFacade;
 import model.dao.IndicatorsFacade;
 import model.pojo.Indicators;
@@ -151,7 +153,8 @@ public class IndicatorsCountMB {
     private boolean showGeo = false;//mostrar seccion de mapas
     
     private boolean showAddressGeo = false; //mostrar seccion de georreferenciacion con direcciones
-    
+    private String addressQuery = "";
+        
     private boolean showGraphic = false;//mostrar seccion de graficos
     private boolean showTableResult = false;//mostrar tabla de resultados
     private Integer tuplesProcessed = 0;
@@ -440,6 +443,10 @@ public class IndicatorsCountMB {
                 }
             }
         }
+        
+        /*
+            INICIAR AQUI NUEVO METODO PARA CONTEO DE DELITOS
+        */
         if (continueProcess) {//ELIMINO DATOS DE UN PROCESO ANTERIOR
             removeIndicatorRecords();
         }
@@ -451,15 +458,33 @@ public class IndicatorsCountMB {
                 separateRecordsFunction();
             }
         }
+        
+        //REALIZO UNA COPA DE LOS DELITOS A LA TABLA INDICATORS ADDRESS
+        if (continueProcess){
+            saveIndicatorsRecordsForAddresses();
+        
+        }
+        
         if (continueProcess) {//CREO TODAS LAS POSIBLES COMBINACIONES
             createCombinations();
         }
+        
         if (continueProcess) {//AGRUPO LOS VALORES
             groupingOfValues();
         }
         if (!showEmpty) {
             removeEmpty();
         }
+        
+        //ELIMINO LOS DELITOS DE LA TABLA indicators_addresses QUE NO ESTEN DENTRO DE LAS VARIABLES SELECCIONADAS
+        if (continueProcess){
+            removeUnusedAddressCombinations();
+        
+        }
+        
+        /*
+            TERMINAR AQUI NUEVO METODO
+        */
 
         if (continueProcess) {//MATRIZ DE RESULTADOS
             createMatrixResult();
@@ -497,6 +522,12 @@ public class IndicatorsCountMB {
                         vars += var.getName() + ",";
                     }
                     
+                }
+                
+                if(showAddressGeo){
+                    //1.modificar query
+                    
+                
                 }
             }
             //System.out.println("tamaño: " + matrixResult.length);
@@ -2611,6 +2642,23 @@ public class IndicatorsCountMB {
                 + "    ) \n\r";
         //System.out.println("ELIMINACIONES \n " + sql);
         connectionJdbcMB.non_query(sql);
+        
+        //elimino los datos de direcciones
+        sql = ""
+                + " DELETE FROM \n\r"
+                + "    indicators_addresses \n\r"
+                + " WHERE \n\r"
+                + "    user_id = " + loginMB.getCurrentUser().getUserId() + " \n\r";
+                /*
+                + "    ( \n\r"
+                + "       indicator_id = " + currentIndicator.getIndicatorId() + " OR \n\r" //datos ordenados completos(los que tienen y no tienen conteo )
+                + "       indicator_id = " + (currentIndicator.getIndicatorId() + 100) + " \n\r" //ocurrencias
+                + "    ) \n\r";*/
+        //System.out.println("ELIMINACIONES \n " + sql);
+        connectionJdbcMB.non_query(sql);
+        
+        
+        
     }
 
     /**
@@ -2699,7 +2747,7 @@ public class IndicatorsCountMB {
      * @return
      */
     private String createIndicatorConsult() {
-
+        
         String sqlReturn = "";
         if (currentIndicator.getIndicatorId() == 71 || currentIndicator.getIndicatorId() == 75) {
             //CASOS DE VIOLENCIA SEXUAL (VSX) EN EL SECTOR SALUD
@@ -2708,8 +2756,10 @@ public class IndicatorsCountMB {
                     + " SELECT *\n"
                     + " FROM \n"
                     + " ( \n";
+            addressQuery = sqlReturn;
         }
         sqlReturn = sqlReturn + " SELECT  \n\r";
+        
         separateRecords = false;
         sourceTable = "";//tabla adicional que se usara en la seccion "FROM" de la consulta sql
         String filterSourceTable = "";//filtro adicional usado en la seccion "WHERE" de la consulta sql
@@ -2726,13 +2776,16 @@ public class IndicatorsCountMB {
                         sqlReturn = sqlReturn + "       ) THEN '" + variablesCrossData.get(i).getValues().get(j) + "'  \n\r";
                     }
                     sqlReturn = sqlReturn + "   END AS fecha";
+                    
                     break;
                 case injuries_fatal://TIPO DE LESION FATAL-----------------------
-                    sqlReturn = sqlReturn + "   CASE (SELECT injury_id FROM injuries WHERE injury_id=" + currentIndicator.getInjuryType() + ".injury_id) \n\r";
+                    
+                    sqlReturn = sqlReturn + " CASE (SELECT injury_id FROM injuries WHERE injury_id=" + currentIndicator.getInjuryType() + ".injury_id) \n\r";
                     for (int j = 0; j < variablesCrossData.get(i).getValues().size(); j++) {
                         sqlReturn = sqlReturn + "       WHEN '" + variablesCrossData.get(i).getValuesId().get(j) + "' THEN '" + variablesCrossData.get(i).getValues().get(j) + "'  \n\r";
                     }
                     sqlReturn = sqlReturn + "   END AS tipo_lesion";
+                    
                     break;
                 case source_vif:
                     sqlReturn = sqlReturn + ""
@@ -2740,9 +2793,11 @@ public class IndicatorsCountMB {
                             + "      WHEN " + currentIndicator.getInjuryType() + ".injury_id is null THEN 'SIN DATO' \n\r"
                             + "      ELSE (SELECT source_vif_name FROM source_vif WHERE source_vif_id = " + currentIndicator.getInjuryType() + ".injury_id) \n\r"
                             + "   END AS origen_vif";
+                    
                     break;
 
                 case injuries_non_fatal://TIPO DE LESION NO FATAL-----------------------
+                    
                     sqlReturn = sqlReturn + "   CASE (SELECT injury_id FROM injuries WHERE injury_id=" + currentIndicator.getInjuryType() + ".injury_id) \n\r";
                     for (int j = 0; j < variablesCrossData.get(i).getValues().size(); j++) {
                         sqlReturn = sqlReturn + "       WHEN '" + variablesCrossData.get(i).getValuesId().get(j) + "' THEN '" + variablesCrossData.get(i).getValues().get(j) + "'  \n\r";
@@ -2750,6 +2805,7 @@ public class IndicatorsCountMB {
                     sqlReturn = sqlReturn + "       WHEN '55' THEN 'VIOLENCIA INTRAFAMILIAR'  \n\r";
                     sqlReturn = sqlReturn + "       WHEN '56' THEN 'VIOLENCIA INTRAFAMILIAR'  \n\r";
                     sqlReturn = sqlReturn + "   END AS tipo_lesion";
+                    
                     break;
                 case age://DETERMINAR EDAD -----------------------          
                     if (variablesCrossData.get(i).getSource_table().compareTo("victims.victim_age") == 0) {
@@ -2789,6 +2845,7 @@ public class IndicatorsCountMB {
                         }
                         sqlReturn = sqlReturn + "   END AS edad_agresor";
                     }
+                    
                     break;
                 case hour://HORA -----------------------
                     sqlReturn = sqlReturn + ""
@@ -2805,6 +2862,7 @@ public class IndicatorsCountMB {
                         }
                     }
                     sqlReturn = sqlReturn + "   END AS hora";
+                    
                     break;
                 case neighborhoods://NOMBRE DEL BARRIO -----------------------
                     sqlReturn = sqlReturn + ""
@@ -2812,6 +2870,7 @@ public class IndicatorsCountMB {
                             + "      WHEN " + currentIndicator.getInjuryType() + ".injury_neighborhood_id is null THEN 'SIN DATO' \n\r"
                             + "      ELSE (SELECT neighborhood_name FROM neighborhoods WHERE neighborhood_id = " + currentIndicator.getInjuryType() + ".injury_neighborhood_id) \n\r"
                             + "   END AS barrio";
+                    
                     break;
                 case communes://COMUNA -----------------------
                     sqlReturn = sqlReturn + ""
@@ -2829,6 +2888,7 @@ public class IndicatorsCountMB {
                             + "          neighborhoods.neighborhood_id=" + currentIndicator.getInjuryType() + ".injury_neighborhood_id \n\r"
                             + "    )"
                             + " END AS comuna";
+                    
                     break;
                 case quadrants://CUADRANTE -----------------------
                     //sqlReturn = sqlReturn + "   CAST((SELECT neighborhood_quadrant FROM neighborhoods WHERE neighborhood_id=" + currentIndicator.getInjuryType() + ".injury_neighborhood_id) as text) as cuadrante \n\r";
@@ -2845,6 +2905,7 @@ public class IndicatorsCountMB {
                             + "          quadrants.quadrant_id=" + currentIndicator.getInjuryType() + ".quadrant_id \n\r"
                             + "    )"
                             + " END AS cuadrante";
+                    
                     break;
                 case corridors://CORREDOR -----------------------
                     sqlReturn = sqlReturn + ""
@@ -2862,6 +2923,7 @@ public class IndicatorsCountMB {
                             + "          neighborhoods.neighborhood_id=" + currentIndicator.getInjuryType() + ".injury_neighborhood_id \n\r"
                             + "    )"
                             + " END AS corredor";
+                    
                     break;
                 case areas://ZONA -----------------------        
                     sqlReturn = sqlReturn + ""
@@ -2879,6 +2941,7 @@ public class IndicatorsCountMB {
                             + "          neighborhoods.neighborhood_id=" + currentIndicator.getInjuryType() + ".injury_neighborhood_id \n\r"
                             + "    )"
                             + " END AS zona";
+                    
                     break;
                 case genders://GENERO  ----------------------
                     if (variablesCrossData.get(i).getSource_table().compareTo("sivigila_aggresor.gender") == 0) {
@@ -2889,6 +2952,7 @@ public class IndicatorsCountMB {
                     if (variablesCrossData.get(i).getSource_table().compareTo("victims.gender_id") == 0) {
                         sqlReturn = createCase(sqlReturn, variablesCrossData.get(i).getSource_table(), "gender_name", "genders", "gender_id", "genero_victima");
                     }
+                    
                     break;
                 case days://DIA SEMANA ---------------------
                     sqlReturn = sqlReturn + ""
@@ -2896,6 +2960,7 @@ public class IndicatorsCountMB {
                             + "    WHEN " + currentIndicator.getInjuryType() + ".injury_day_of_week is null THEN 'SIN DATO' \n\r"
                             + "    ELSE ( " + currentIndicator.getInjuryType() + ".injury_day_of_week )"
                             + " END AS dia_semana";
+                    
                     break;
                 case year://AÑO -----------------------
                     sqlReturn = sqlReturn + ""
@@ -2903,6 +2968,7 @@ public class IndicatorsCountMB {
                             + "    WHEN " + currentIndicator.getInjuryType() + ".injury_date is null THEN 'SIN DATO' \n\r"
                             + "    ELSE ( CAST(extract(year from " + currentIndicator.getInjuryType() + ".injury_date)::int as text) )"
                             + " END AS anyo";
+                    
                     break;
                 case month://MES 
                     sqlReturn = sqlReturn + ""
@@ -2918,6 +2984,7 @@ public class IndicatorsCountMB {
                             + "          (extract(month from " + currentIndicator.getInjuryType() + ".injury_date)::int) = months.month_id \n\r"
                             + "    )"
                             + " END AS mes";
+                    
                     break;
                 case sivigila_educational_level://escolaridad agresor
                     if (variablesCrossData.get(i).getSource_table().compareTo("sivigila_aggresor.educational_level_id") == 0) {
@@ -2930,19 +2997,23 @@ public class IndicatorsCountMB {
                         addToSourceTable("sivigila_victim");
                         sqlReturn = createCase(sqlReturn, variablesCrossData.get(i).getSource_table(), "sivigila_educational_level_name", "sivigila_educational_level", "sivigila_educational_level_id", "escolaridad_victima");
                     }
+                    
                     break;
                 case sivigila_vulnerability://factor de vulnerabilidad
                     addToSourceTable("sivigila_event");
                     addToSourceTable("sivigila_victim");
                     sqlReturn = createCase(sqlReturn, variablesCrossData.get(i).getSource_table(), "sivigila_vulnerability_name", "sivigila_vulnerability", "sivigila_vulnerability_id", "factor_vulnerabilidad");
+                    
                     break;
                 case sivigila_group://";"grupo agresor"
                     addToSourceTable("sivigila_event");
                     addToSourceTable("sivigila_aggresor");
                     sqlReturn = createCase(sqlReturn, variablesCrossData.get(i).getSource_table(), "sivigila_group_name", "sivigila_group", "sivigila_group_id", "grupo_agresor");
+                    
                     break;
                 case degree:
                     sqlReturn = createCase(sqlReturn, variablesCrossData.get(i).getSource_table(), "name_degree", "degree", "degree_id", "grado_quemadura");
+                    
                     break;
                 case kinds_of_injury://RELACION DE UNO A MUCHOS
                     separateRecords = true;
@@ -2955,6 +3026,7 @@ public class IndicatorsCountMB {
                             + "          FROM non_fatal_kind_of_injury \n"
                             + "          WHERE non_fatal_kind_of_injury.non_fatal_injury_id=non_fatal_injuries.non_fatal_injury_id )\n"
                             + " END AS naturaleza_lesion \n";
+                    
                     break;
                 case anatomical_locations://RELACION DE UNO A MUCHOS
                     separateRecords = true;
@@ -2967,6 +3039,7 @@ public class IndicatorsCountMB {
                             + "         FROM non_fatal_anatomical_location \n"
                             + "         WHERE non_fatal_anatomical_location.non_fatal_injury_id=non_fatal_injuries.non_fatal_injury_id )\n"
                             + " END AS sitio_anatomico \n";
+                    
                     break;
 
                 case actions_to_take://RELACION DE UNO A MUCHOS
@@ -2980,6 +3053,7 @@ public class IndicatorsCountMB {
                             + "          FROM domestic_violence_action_to_take \n"
                             + "          WHERE domestic_violence_action_to_take.non_fatal_injury_id=non_fatal_injuries.non_fatal_injury_id )\n"
                             + " END AS acciones_a_realizar \n";
+                    
                     break;
                 case security_elements://RELACION DE UNO A MUCHOS
                     separateRecords = true;
@@ -2992,6 +3066,7 @@ public class IndicatorsCountMB {
                             + "          FROM non_fatal_transport_security_element \n"
                             + "          WHERE non_fatal_transport_security_element.non_fatal_injury_id=non_fatal_injuries.non_fatal_injury_id )\n"
                             + " END AS elementos_seguridad \n";
+                    
                     break;
                 case vulnerable_groups://";"grupo poblacional"//RELACION DE UNO A MUCHOS
                     separateRecords = true;
@@ -3004,6 +3079,7 @@ public class IndicatorsCountMB {
                             + "          FROM victim_vulnerable_group \n"
                             + "          WHERE victim_vulnerable_group.victim_id=victims.victim_id )\n"
                             + " END AS grupo_poblacional \n";
+                    
                     break;
                 case abuse_types://";"tipo maltrato" //RELACION DE UNO A MUCHOS
                     separateRecords = true;
@@ -3016,10 +3092,12 @@ public class IndicatorsCountMB {
                             + "          FROM domestic_violence_abuse_type \n"
                             + "          WHERE domestic_violence_abuse_type.non_fatal_injury_id=non_fatal_injuries.non_fatal_injury_id )\n"
                             + " END AS tipo_maltrato \n";
+                    
                     break;
 
                 case ethnic_groups://";"pertenecia étnica"
                     sqlReturn = createCase(sqlReturn, variablesCrossData.get(i).getSource_table(), "ethnic_group_name", "ethnic_groups", "ethnic_group_id", "grupo_etnico");
+                    
                     break;
                 case aggressor_types:
                     //tipo agresor vif
@@ -3323,7 +3401,7 @@ public class IndicatorsCountMB {
             filterSourceTable = filterSourceTable + " victims.gender_id = 2 AND \n";
         }
         sqlReturn = sqlReturn + ""
-                + "   FROM  \n"
+                + "  # FROM  \n"
                 + "       " + currentIndicator.getInjuryType() + "\n"
                 + "       " + sourceTable
                 + "       JOIN victims USING (victim_id) \n"
@@ -3403,8 +3481,19 @@ public class IndicatorsCountMB {
                     + " naturaleza_violencia not like '%>7}' AND "//no sea sin dato
                     + " naturaleza_violencia not like '%>8}' ";//no sea otro
         }
-        System.out.println("CONSULTA (indicators count) \n " + sqlReturn);
-        return sqlReturn;
+        
+        //AGREGO EL ATRIBUTO DE IDENTIFICACION DE DELITOS A LA CONSULTA
+        
+        String[] sqlSplit = sqlReturn.split("#");
+        
+        if(currentIndicator.getInjuryType().compareTo("fatal_injuries") == 0){
+            addressQuery = sqlSplit[0] + " ,fatal_injury_id " + sqlSplit[1];
+        }else{
+            addressQuery = sqlSplit[0] + " ,non_fatal_injury_id " + sqlSplit[1];
+        }
+        
+        //System.out.println("CONSULTA2 (indicators count) \n " + addressQuery);
+        return addressQuery;
     }
 
     /**
@@ -3427,7 +3516,10 @@ public class IndicatorsCountMB {
             ResultSet rs = connectionJdbcMB.consult(sqlConsult);
             sb = new StringBuilder();
             tuplesProcessed = 0;
-            int ncol = rs.getMetaData().getColumnCount();
+            int ncol = rs.getMetaData().getColumnCount() - 1;
+            
+            System.out.println("NRO COLUMNAS" + ncol);
+            
             if (addAbuseTypes) {
                 ncol--;//SE QUITA LA COLUMNA DE NATURALEZA VIOLENCIA
             }
@@ -3452,15 +3544,22 @@ public class IndicatorsCountMB {
                     for (int i = 0; i < 3 - ncol; i++) {//variables no usadas(vacias)
                         sb.append("-").append("\t");
                     }
-                    sb.append(0).append("\t").append(0).append("\n");//count y poblacion quedan como cero
+                    
+                    sb.append(0).append("\t").append(0).append("\t").append(rs.getInt(rs.getMetaData().getColumnCount())).append("\n");//count y poblacion quedan como cero
+                    
                 }
             }
+            
             //REALIZO LA INSERCION
             cpManager.copyIn("COPY indicators_records FROM STDIN", new StringReader(sb.toString()));
             sb.delete(0, sb.length()); //System.out.println("Procesando... filas " + tuplesProcessed + " cargadas");
-        } catch (SQLException | IOException e) {
+            
+            
+            
+        } catch (IOException | SQLException e) {
             System.out.println("Error 4 en " + this.getClass().getName() + ":" + e.toString());
         }
+    
     }
 
     /**
@@ -3531,7 +3630,8 @@ public class IndicatorsCountMB {
                                             append(rs.getString("column_2")).append("\t"). //  column_2 text, -- valor de la segunda variable cruzada
                                             append(rs.getString("column_3")).append("\t"). //  column_3 text, -- valor de la tercer variable cruzada
                                             append(0).append("\t"). //  count integer, -- numero de coincidencias para este cruce
-                                            append(0).append("\n");                             //  population integer,
+                                            append(0).append("\t").//  population integer,
+                                            append(rs.getInt("injury_id")).append("\n"); //injury_id
                                 }
                                 if (col == 2) {
                                     sb.
@@ -3542,7 +3642,8 @@ public class IndicatorsCountMB {
                                             append(rs2.getString(1)).append("\t"). //  column_2 text, -- valor de la segunda variable cruzada
                                             append(rs.getString("column_3")).append("\t"). //  column_3 text, -- valor de la tercer variable cruzada
                                             append(0).append("\t"). //  count integer, -- numero de coincidencias para este cruce
-                                            append(0).append("\n");                             //  population integer,
+                                            append(0).append("\t").                             //  population integer,
+                                            append(rs.getInt("injury_id")).append("\n"); //injury_id
                                 }
                                 if (col == 3) {
                                     sb.
@@ -3553,7 +3654,8 @@ public class IndicatorsCountMB {
                                             append(rs.getString("column_2")).append("\t"). //  column_2 text, -- valor de la segunda variable cruzada
                                             append(rs2.getString(1)).append("\t"). //  column_3 text, -- valor de la tercer variable cruzada
                                             append(0).append("\t"). //  count integer, -- numero de coincidencias para este cruce
-                                            append(0).append("\n");                             //  population integer,
+                                            append(0).append("\t").                             //  population integer,
+                                            append(rs.getInt("injury_id")).append("\n"); //injury_id
                                 }
                             }
                         }
@@ -3667,6 +3769,7 @@ public class IndicatorsCountMB {
                             append("-").append("\t").
                             append("-").append("\t").
                             append(0).append("\t").
+                            append(0).append("\t").
                             append(0).append("\n");
                     id++;
                 }
@@ -3687,6 +3790,7 @@ public class IndicatorsCountMB {
                                 append(values1.get(j)).append("\t").
                                 append(values2.get(i)).append("\t").
                                 append("-").append("\t").
+                                append(0).append("\t").
                                 append(0).append("\t").
                                 append(0).append("\n");
                         id++;
@@ -3711,6 +3815,7 @@ public class IndicatorsCountMB {
                                     append(values2.get(i)).append("\t").
                                     append(values3.get(k)).append("\t").
                                     append(0).append("\t").
+                                    append(0).append("\t").
                                     append(0).append("\n");
                             id++;
                         }
@@ -3722,6 +3827,100 @@ public class IndicatorsCountMB {
             sb.delete(0, sb.length()); //System.out.println("Procesando... filas " + tuplesProcessed + " cargadas");
         } catch (SQLException | IOException e) {
             System.out.println("Error 7 en " + this.getClass().getName() + ":" + e.toString());
+        }
+    }
+    
+    /*
+        Procesamiento a nivel de direcciones
+    */
+    public void saveIndicatorsRecordsForAddresses(){
+        
+        try {
+            cpManager = new CopyManager((BaseConnection) connectionJdbcMB.getConn());
+            sb = new StringBuilder();
+            
+            sql = ""
+                + "SELECT\n"
+                + "	   user_id, \n"
+                + "	   indicator_id, \n"
+                + "	   record_id,\n"
+                + "	   injury_id,\n"
+                + "	   column_1,\n"
+                + "	   column_2,\n"
+                + "	   column_3\n"
+                + "FROM\n"
+                + "	   indicators_records\n"
+                + " WHERE \n\r"
+                + "    user_id = " + loginMB.getCurrentUser().getUserId() + " AND \n\r"
+                + "    indicator_id = " + (currentIndicator.getIndicatorId() + 100) + " \n\r";
+            
+            ResultSet rs = connectionJdbcMB.consult(sql);
+            
+            while(rs.next()){
+                sb.
+                        append(rs.getInt("user_id")).append("\t").
+                        append(rs.getInt("indicator_id")).append("\t").
+                        append(rs.getInt("record_id")).append("\t").
+                        append(rs.getInt("injury_id")).append("\t").
+                        append(rs.getString("column_1")).append("\t").
+                        append(rs.getString("column_2")).append("\t").
+                        append(rs.getString("column_3")).append("\n");
+            }
+            
+            cpManager.copyIn("COPY indicators_addresses FROM STDIN", new StringReader(sb.toString()));
+            sb.delete(0, sb.length());
+            
+        } catch (IOException | SQLException e) {
+            System.out.println("Error 7.1 (Geocodificacion) en " + this.getClass().getName() + ":" + e.toString());
+        }
+        
+    
+    }
+    
+    public void removeUnusedAddressCombinations (){
+        sql = ""
+                + "DELETE FROM \n"
+                + "     indicators_address\n"
+                + "WHERE injury_id NOT IN (\n"
+                + "     SELECT \n"
+                + "             addr.injury_id\n"
+                + "     FROM\n"
+                + "             indicators_records rec,\n"
+                + "             indicators_addresses addr\n"
+                + "     WHERE\n"
+                + "             rec.column_1 LIKE addr.column_1 AND\n"
+                + "             rec.column_2 LIKE addr.column_2 AND\n"
+                + "             rec.column_3 LIKE addr.column_3 AND\n"
+                + "             rec.user_id = " + (loginMB.getCurrentUser().getUserId()) + " AND \n\r"
+                + "             rec.indicator_id = " + (currentIndicator.getIndicatorId()) + " \n\r"
+                + ")";
+
+        
+        connectionJdbcMB.non_query(sql);
+    }
+    
+    public void processAddress(){
+        boolean continueProcess = true;
+        
+        if (continueProcess) {//ELIMINO DATOS DE UN PROCESO ANTERIOR
+            removeIndicatorRecords();
+        }
+        if (continueProcess) {//ALMACENO EN BASE DE DATOS LOS REGISTROS DE ESTE CRUCE
+            saveIndicatorRecords(createIndicatorConsult());
+        }
+        if (continueProcess) {//DE SER NECESARIO SEPARO LOS REGISTROS(cuando son variables con relaciones de uno a muchos)
+            if (separateRecords) {
+                separateRecordsFunction();
+            }
+        }
+        if (continueProcess) {//CREO TODAS LAS POSIBLES COMBINACIONES
+            createCombinations();
+        }
+        if (continueProcess) {//AGRUPO LOS VALORES
+            groupingOfValues();
+        }
+        if (!showEmpty) {
+            removeEmpty();
         }
     }
 
