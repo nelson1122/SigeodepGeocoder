@@ -1,0 +1,175 @@
+{
+    "features": [{
+            "geometry": {
+                "coordinates": [-8602613.439818535, 134033.13249396323],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 303
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8601648.644929344, 133899.38908895466],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 305
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8601606.030956637, 133333.1684891932],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 10
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602380.525075015, 132957.59753300966],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 15
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602854.75005541, 133859.22543547672],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 77
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8601932.037913412, 133878.57033731267],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 68
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602424.87437498, 134552.45612052336],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 94
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8603015.165315561, 133939.15693527984],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 117
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602647.41667225, 134183.5188156913],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 132
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602042.398456922, 134108.8874878343],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 126
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602858.128138866, 135463.61125342746],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 159
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602029.936998013, 133611.95282265605],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 148
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602011.656550948, 133107.66749056062],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 172
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602960.859714996, 134098.71379393723],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 190
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602781.456487812, 134155.7762419882],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 177
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602337.686579801, 135153.56557212205],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 61
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602424.87437498, 134552.45612052336],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 104
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602913.743816216, 135083.0101326641],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 147
+            }
+        }, {
+            "geometry": {
+                "coordinates": [-8602562.798144275, 134332.194348531],
+                "type": "Point"
+            },
+            "type": "Feature",
+            "properties": {
+                "fatal_injury_id": 144
+            }
+        }],
+    "type": "FeatureCollection"
+}

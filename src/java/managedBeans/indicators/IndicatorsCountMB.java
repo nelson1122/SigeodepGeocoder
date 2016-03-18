@@ -73,6 +73,9 @@ import org.joda.time.Days;
 import org.joda.time.Interval;
 import org.joda.time.Months;
 import org.joda.time.Years;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 import org.primefaces.component.outputpanel.OutputPanel;
@@ -154,7 +157,9 @@ public class IndicatorsCountMB {
     
     private boolean showAddressGeo = false; //mostrar seccion de georreferenciacion con direcciones
     private String addressQuery = "";
-        
+    private JSONObject injuriesRoot;
+    private int selectedCategoryForInjuries = 3;
+            
     private boolean showGraphic = false;//mostrar seccion de graficos
     private boolean showTableResult = false;//mostrar tabla de resultados
     private Integer tuplesProcessed = 0;
@@ -186,7 +191,6 @@ public class IndicatorsCountMB {
      * dissagregations.
      */
     public IndicatorsCountMB() {
-
         connectionJdbcMB = (ConnectionJdbcMB) FacesContext.getCurrentInstance().getApplication().evaluateExpressionGet(FacesContext.getCurrentInstance(), "#{connectionJdbcMB}", ConnectionJdbcMB.class);
         geoDBConnection = (GeoDBConnection) FacesContext.getCurrentInstance().getApplication().evaluateExpressionGet(FacesContext.getCurrentInstance(), "#{geoDBConnectionMB}", GeoDBConnection.class);
         loginMB = (LoginMB) FacesContext.getCurrentInstance().getApplication().evaluateExpressionGet(FacesContext.getCurrentInstance(), "#{loginMB}", LoginMB.class);
@@ -3880,7 +3884,7 @@ public class IndicatorsCountMB {
     public void removeUnusedAddressCombinations (){
         sql = ""
                 + "DELETE FROM \n"
-                + "     indicators_address\n"
+                + "     indicators_addresses\n"
                 + "WHERE injury_id NOT IN (\n"
                 + "     SELECT \n"
                 + "             addr.injury_id\n"
@@ -3899,8 +3903,163 @@ public class IndicatorsCountMB {
         connectionJdbcMB.non_query(sql);
     }
     
-    public void processAddress(){
+    public JSONObject loadGeoJSON(){
+        
+        String sourceGeocodedTable = "";
+        String joinField = "";
+        
+        if(currentIndicator.getInjuryType().compareTo("fatal_injuries") == 0){
+            sourceGeocodedTable = "geocoded_fatal_injuries";
+            joinField = "fatal_injury_id";
+        }else{
+            sourceGeocodedTable = "geocoded_non_fatal_injuries";
+            joinField = "non_fatal_injury_id";
+        }
+        
+        try{
+            String sql = ""
+                    + "SELECT\n"
+                    + "	injury_id,\n"
+                    + "	lon,\n"
+                    + "	lat\n"
+                    + "FROM\n"
+                    + "	indicators_addresses \n"
+                    + "		JOIN " + sourceGeocodedTable + " ON injury_id = "+ joinField +"\n"
+                    + "WHERE\n"
+                    + "	user_id = " + (loginMB.getCurrentUser().getUserId()) + " AND\n"
+                    + "	indicator_id = " + (currentIndicator.getIndicatorId()) + " AND\n"
+                    + "	(lon IS NOT NULL AND lat IS NOT NULL);";
+            
+            ResultSet rs = connectionJdbcMB.consult(sql);
+            JSONArray featuresArray = new JSONArray();
+            int processedTuples = 0;
+           
+            while (rs.next()) {
+                JSONArray coordinates = new JSONArray();
+                coordinates.put(0, rs.getDouble("lon"));
+                coordinates.put(1, rs.getDouble("lat"));
+                
+                JSONObject feature = new JSONObject();
+                feature.put("type", "Point");
+                feature.put("coordinates", coordinates);
+
+                JSONObject properties = new JSONObject();
+                properties.put("fatal_injury_id", rs.getInt("injury_id"));
+                
+                JSONObject geometry = new JSONObject();
+                geometry.put("type", "Feature");
+                geometry.put("geometry", feature);
+                geometry.put("properties", properties);
+    
+                featuresArray.put(processedTuples, geometry);
+                
+                processedTuples ++;
+            }
+            
+            injuriesRoot.put("features", featuresArray);
+            injuriesRoot.put("type", "FeatureCollection");
+            
+        }catch (SQLException | JSONException ex){
+        
+        }
+        return injuriesRoot;
+    }
+    
+    public void processAddressCountIndicators(){
+        
+        
+        loadIndicator(selectedCategoryForInjuries);
+        
+        variablesCrossData = new ArrayList<>();//lista de variables a cruzar            
         boolean continueProcess = true;
+        message = null;
+        
+        if (continueProcess) {//VALIDACION DE FECHAS            
+            initialDateStr = formato.format(initialDate);
+            endDateStr = formato.format(endDate);
+            long fechaInicialMs = initialDate.getTime();
+            long fechaFinalMs = endDate.getTime();
+            long diferencia = fechaFinalMs - fechaInicialMs;
+            if (diferencia < 0) {
+                message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "La fecha inicial debe ser inferior o igual a la final");
+                continueProcess = false;
+            }
+        }
+
+        if (continueProcess && sameRangeLimit) {//se valida que exista diferencia de año
+            if (initialDate.getYear() == endDate.getYear()) {
+                message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Cuando se utiliza la opcion 'Limitar a rangos similares' la fecha inicial y final deben estar en diferentes años, desactive la opción o cambie las fechas");
+                continueProcess = false;
+            }
+        }
+
+        if (continueProcess && sameRangeLimit) {
+            if (initialDate.getMonth() > endDate.getMonth()) {
+                message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Cuando se utiliza la opcion 'Limitar a rangos similares' el mes de la fecha final debe ser igual o mayor que el mes de la fecha inicial");
+                continueProcess = false;
+            }
+        }
+
+        if (continueProcess && sameRangeLimit) {
+            if (initialDate.getDate() > endDate.getDate()) {
+                message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "Cuando se utiliza la opcion 'Limitar a rangos similares' el dia de la fecha final debe ser igual o mayor que el dia de la fecha inicial");
+                continueProcess = false;
+            }
+        }
+
+        if (continueProcess) {//NUMERO DE VARIABLES A CRUZAR SEA MENOR O IGUAL AL LIMITE ESTABLECIDO
+            if (currentIndicator.getIndicatorId() < 5) {//es un indicador general
+                if (variablesCrossList.size() <= numberCross) {
+                    continueProcess = true;
+                } else {
+                    continueProcess = false;
+                    message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "En la lista de variables a cruzar deben haber " + numberCross + " o menos variables");
+                }
+            } else {
+                if (variablesCrossList.size() < 4 && variablesCrossList.size() > 0) {
+                    continueProcess = true;
+                } else {
+                    continueProcess = false;
+                    message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "En la lista de variables a cruzar deben haber minimo 1 y maximo 3 variables");
+                }
+            }
+        }
+        if (continueProcess) {//SI ES INDICADOR GENERAL AGREGO UNA NUEVA VARIABLE A CRUZAR(tipo lesion)
+            if (currentIndicator.getIndicatorId() == 1 || currentIndicator.getIndicatorId() == 2) {//agrego a la lista de variables a cruzar "tipo de lesion fatal"
+                Variable newVariable = createVariable("Tipo Lesion", "injuries_fatal", false, "");
+                variablesCrossData.add(newVariable);
+            }
+            if (currentIndicator.getIndicatorId() == 3 || currentIndicator.getIndicatorId() == 4) {//agrego a la lista de variables a cruzar "tipo de lesion fatal"
+                Variable newVariable = createVariable("Tipo Lesion", "injuries_non_fatal", false, "");
+                variablesCrossData.add(newVariable);
+            }
+        }
+        if (continueProcess) {//AGREGO LAS VARIABLES INDICADAS POR EL USUARIO
+            for (int j = 0; j < variablesCrossList.size(); j++) {
+                for (int i = 0; i < variablesListData.size(); i++) {
+                    if (variablesListData.get(i).getName().compareTo(variablesCrossList.get(j)) == 0) {
+                        variablesCrossData.add(variablesListData.get(i));
+                    }
+                }
+            }
+        }
+        if (continueProcess) {//CADA VARIABLE A CRUZAR TENGA VALORES CONFIGURADOS
+            for (int i = 0; i < variablesCrossData.size(); i++) {
+                if (variablesCrossData.get(i).getValuesConfigured().isEmpty()) {
+                    message = new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "La variable " + variablesCrossData.get(i).getName() + " no tiene valores configurados, para continuar debe ser configurada.");
+                    continueProcess = false;
+                }
+            }
+        }
+        if (continueProcess) {//CARGO LOS COMBOS PARA EL GRAFICO            
+            if (variablesCrossData.size() == 3) {
+                currentVariableGraph = variablesCrossData.get(2).getName();
+                for (int j = 0; j < variablesCrossData.get(2).getValuesConfigured().size(); j++) {
+                    valuesGraph.add(variablesCrossData.get(2).getValuesConfigured().get(j));
+                    currentValueGraph = variablesCrossData.get(2).getValuesConfigured().get(j);
+                }
+            }
+        }
         
         if (continueProcess) {//ELIMINO DATOS DE UN PROCESO ANTERIOR
             removeIndicatorRecords();
@@ -3913,14 +4072,27 @@ public class IndicatorsCountMB {
                 separateRecordsFunction();
             }
         }
+        
+        //REALIZO UNA COPA DE LOS DELITOS A LA TABLA INDICATORS ADDRESS
+        if (continueProcess){
+            saveIndicatorsRecordsForAddresses();
+        
+        }
+        
         if (continueProcess) {//CREO TODAS LAS POSIBLES COMBINACIONES
             createCombinations();
         }
+        
         if (continueProcess) {//AGRUPO LOS VALORES
             groupingOfValues();
         }
         if (!showEmpty) {
             removeEmpty();
+        }
+        
+        //ELIMINO LOS DELITOS DE LA TABLA indicators_addresses QUE NO ESTEN DENTRO DE LAS VARIABLES SELECCIONADAS
+        if (continueProcess){
+            removeUnusedAddressCombinations();
         }
     }
 
@@ -4349,14 +4521,15 @@ public class IndicatorsCountMB {
     public void setShowTableResult(boolean showTableResult) {
         this.showTableResult = showTableResult;
     }
-    
-    //seccion de geocodificacion con direcciones
-    public boolean isShowAddressGeo() {
-        return showAddressGeo;
+
+    public int getSelectedCategoryForInjuries() {
+        return selectedCategoryForInjuries;
     }
 
-    public void setShowAddressGeo(boolean showAddressGeo) {
-        this.showAddressGeo = showAddressGeo;
+    public void setSelectedCategoryForInjuries(int selectedCategoryForInjuries) {
+        this.selectedCategoryForInjuries = selectedCategoryForInjuries;
     }
+    
+    
     
 }

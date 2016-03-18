@@ -420,10 +420,29 @@
             <to-view-id>/web/configurations/closures.xhtml</to-view-id>
             <redirect/>
         </navigation-case>
+        
+        <!-- GEOCODER CONFIGURATION-->
+        
         <navigation-case>
-            <from-outcome>geocodeInjuries</from-outcome>
-            <to-view-id>/web/geocoder/geocodeInjuries.xhtml</to-view-id>
+            <from-outcome>addressGeocoding</from-outcome>
+            <to-view-id>/web/geocoder/addressGeocoding.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>
+        <navigation-case>
+            <from-outcome>fatalInjuries</from-outcome>
+            <to-view-id>/web/geocoder/fatalInjuries.xhtml</to-view-id>
             <redirect/>
         </navigation-case>                           
+        <navigation-case>
+            <from-outcome>nonFatalInjuries</from-outcome>
+            <to-view-id>/web/geocoder/nonFatalInjuries.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>
+        <navigation-case>
+            <from-outcome>geocoderHomePage</from-outcome>
+            <to-view-id>/web/geocoder/geocoderHomePage.xhtml</to-view-id>
+            <redirect/>
+        </navigation-case>                           
+                                                              
     </navigation-rule>    
 </faces-config>

@@ -42,6 +42,7 @@ public class DefaultPhaseListener implements PhaseListener {
         FacesContext facesContext = event.getFacesContext();
         ExternalContext ext = facesContext.getExternalContext();
         boolean continueProcces = true;
+        boolean fromIndexInvited2 = false;
         //---------------------------------------------------------------------------
         //buscar ID session actual dentro de lista de sesiones en ApplicationControl
         //---------------------------------------------------------------------------
@@ -68,11 +69,24 @@ public class DefaultPhaseListener implements PhaseListener {
             if (!isLoginPage) {
                 isLoginPage = (currentPage.lastIndexOf("indexInvited.xhtml") > -1);//determinar si es index para usuario invitado
             }
+            if (!isLoginPage) {
+                isLoginPage = (currentPage.lastIndexOf("indexInvited2.xhtml") > -1);//determinar si es index para usuario invitado
+                if(isLoginPage){
+                    fromIndexInvited2 = true;
+                }
+            }
+            
             HttpSession session = (HttpSession) facesContext.getExternalContext().getSession(false);
 
             if (!isLoginPage) {
                 if (session == null) {
                     try {//System.out.println("salida del programa por que sesion es null" + ctxPath);
+                        if(fromIndexInvited2){
+                            ext.redirect(ctxPath + "/index3.html?v=timeout");//System.out.println("enviado a: " + ctxPath + "/index.html?v=timeout");
+                        }
+                        else{
+                            ext.redirect(ctxPath + "/index2.html?v=timeout");//System.out.println("enviado a: " + ctxPath + "/index.html?v=timeout");
+                        }
                         ext.redirect(ctxPath + "/index2.html?v=timeout");//System.out.println("enviado a: " + ctxPath + "/index.html?v=timeout");
                     } catch (Throwable t) {//System.out.println("Fallo al expirar sesion " + t.toString());
                         throw new FacesException("Session timed out", t);
@@ -81,7 +95,13 @@ public class DefaultPhaseListener implements PhaseListener {
                     Object currentUser = session.getAttribute("username");
                     if (!isLoginPage && (currentUser == null || currentUser == "")) {
                         try {//System.out.println("salida del programa por que no hay usuario registrado" + ctxPath);
-                            ext.redirect(ctxPath + "/index2.html?v=nosession");
+                            if(fromIndexInvited2){
+                                ext.redirect(ctxPath + "/index3.html?v=nosession");
+                            }
+                            else{
+                                ext.redirect(ctxPath + "/index2.html?v=nosession");
+                            }
+                            ext.redirect(ctxPath + "/index3.html?v=nosession");
                         } catch (Exception e) {//System.out.println("Fallo al expirar sesion " + e.toString());
                             throw new FacesException("Session no login", e);
                         }

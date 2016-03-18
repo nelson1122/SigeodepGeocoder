@@ -1,0 +1,295 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+          
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:h="http://xmlns.jcp.org/jsf/html">
+    <body>
+            
+            <ui:composition template="template.xhtml">
+            
+            <ui:define name="indexTitle">
+                ANALISIS ESPACIAL LESIONES FATALES
+            </ui:define>
+
+            <ui:define name="centerPanel">
+
+                <p:toolbar style="margin-top: -3px; margin-bottom: 2px;">
+                    <p:toolbarGroup>
+                        <p:commandButton type="button" value="Seleccionar area" />
+                    </p:toolbarGroup>
+                </p:toolbar>
+
+                <p:outputPanel id="panelMap">
+                    <div id="fatalInjuriesMap"></div>
+                    <script type="text/javascript">
+
+                        var map, gmaps, osm, heat;
+                        var featurecollection, injuriesLayer;
+                        var boxLayer, box;
+
+                        $(function () {
+
+                            map = new OpenLayers.Map('fatalInjuriesMap');
+
+                            gmaps = new OpenLayers.Layer.Google(
+                                    "Google Hybrid",
+                                    {
+                                        type: google.maps.MapTypeId.HYBRID,
+                                        numZoomLevels: 20
+                                    }
+                            );
+
+                            osm = new OpenLayers.Layer.OSM();
+
+                            
+
+                            //AGREGO LAYERS Y CONFIGURO EL MAPA
+                            map.addLayers([osm, gmaps]);
+                            map.addControl(new OpenLayers.Control.LayerSwitcher());
+                            
+
+                            map.setBaseLayer(gmaps);
+
+                            map.setCenter(new OpenLayers.LonLat(-77.280, 1.21289).transform(
+                                    new OpenLayers.Projection("EPSG:4326"),
+                                    map.getProjectionObject()
+                                    ), 14);
+                        });
+
+                        // called when the feature is complete (double-clicked)
+                        function doneHandler(lineGeom) {
+                            //alert("DONE:" + lineGeom.getVertices());
+                            document.getElementById("formInjuries:txtCoordinates").value = lineGeom.getVertices();
+                        }
+
+                        //activar/desactivar la seleccion de area
+                        function activate() {
+                            if (box.deactivate() === false) {
+                                box.activate();
+                            }
+                        }
+
+
+                    </script>
+                </p:outputPanel>
+
+            </ui:define>
+            <ui:define name="leftPanel">
+
+                <p:layoutUnit position="east" size="45%">
+
+                    <p:fieldset legend="CONFIGURACION" >
+                        
+                        <p:tabView style="height: 180px;">
+                            
+                            <p:tab title="Categorias">
+                                <h:panelGroup layout="block" style="margin: 25px 0px 0px 140px;">
+                                    <h:outputText value="Seleccione lesion de causa externa: "/>
+                                    <br/>
+                                    <br/>
+                                    <p:selectOneMenu id="category" value="#{indicatorsCountMB.selectedCategoryForInjuries}">
+                                        <f:selectItem itemLabel="Casos por Lesión no fatal" itemValue="3"/>
+                                        <f:selectItem itemLabel="Lesiones No Intencionales" itemValue="47"/>
+                                        <f:selectItem itemLabel="Violencia AutoInflingida" itemValue="54"/>
+                                        <f:selectItem itemLabel="Lesiones en Accidentes de transito" itemValue="40"/>
+                                        <f:selectItem itemLabel="Violencia Interpersonal en Familia" itemValue="33"/>
+                                        <f:selectItem itemLabel="Violencia Interpersonal en Comunidad" itemValue="61"/>
+                                    </p:selectOneMenu>
+                                </h:panelGroup>
+                            </p:tab>
+                            
+                            <p:tab title="Rango de Fechas">
+                                <h:panelGroup layout="block" style="margin: 10px 0px 0px 0px;">
+                                    <h:outputText value="Seleccione rango de fechas: "/>
+                                    <br/>
+                                    <br/>
+                                    <br/>
+                                    <h:outputText value="Fecha Inicial:" />
+
+                                    <p:calendar
+                                        id="IdInitialDate"
+                                        value="#{indicatorsCountMB.initialDate}" 
+                                        locale="es"                                       
+                                        converterMessage="La fecha inicial no es válida, por favor corríjala." 
+                                        showOn="button" 
+                                        pattern="dd/MM/yyyy">
+                                        <f:ajax 
+                                            event="change"
+                                            listener="#{indicatorsCountMB.changeDateRange}"
+                                            render="IdSelectOneListCrossVariables IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                    </p:calendar>
+                                    &#160;&#160;
+                                    <h:outputText value="Fecha Final:" />
+
+                                    <p:calendar 
+                                        id="IdEndDate"
+                                        value="#{indicatorsCountMB.endDate}" 
+                                        converterMessage="La fecha final no es válida, por favor corríjala." 
+                                        showOn="button" 
+                                        pattern="dd/MM/yyyy">
+                                        <f:ajax 
+                                            event="change"
+                                            listener="#{indicatorsCountMB.changeDateRange}"
+                                            render="IdSelectOneListCrossVariables IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                    </p:calendar>
+                                </h:panelGroup>
+                            </p:tab>
+                                
+                            <p:tab title="Seleccion de Variables">
+                                <p:panelGrid>
+                                    <p:row>
+                                        <p:column styleClass="ui-widget-header" style="width: 150px;">
+                                            Variables disponibles                                            
+                                        </p:column>    
+                                        <p:column styleClass="ui-widget-header">
+
+                                        </p:column>    
+                                        <p:column styleClass="ui-widget-header" style="width: 170px;">
+                                            Variables a cruzar
+                                        </p:column>    
+                                    </p:row>
+                                    <p:row>
+                                        <p:column>
+                                            
+                                            <h:selectManyListbox 
+                                                id="IdSelectOneListVariables" 
+                                                value="#{indicatorsCountMB.currentVariablesSelected}"
+                                                style="height:110px; width: 200px;"
+                                                converterMessage="Fallo de comunicación, por favor intente nuevamente.">
+                                                <f:selectItems value="#{indicatorsCountMB.variablesList}"/>                                                                                                
+                                                <f:ajax 
+                                                    event="change"
+                                                    listener="#{indicatorsCountMB.changeVariable}"
+                                                    render="IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                                <f:ajax 
+                                                    event="dblclick"
+                                                    listener="#{indicatorsCountMB.addVariableClick}"                                                    
+                                                    render="IdSelectOneListVariables IdSelectOneListCrossVariables  IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                            </h:selectManyListbox> 
+                                            
+                                        </p:column>
+                                        <p:column>
+
+                                            <p:commandButton 
+                                                value="Agregar" 
+                                                style="width: 120px;"
+                                                id="IdBtnAdd" 
+                                                icon="ui-icon-arrowthick-1-e"                                            
+                                                disabled="#{indicatorsCountMB.btnAddVariableDisabled}"
+                                                actionListener="#{indicatorsCountMB.addVariableClick}"  
+                                                update="IdSelectOneListVariables IdSelectOneListCrossVariables IdBtnRemove IdBtnAdd IdBtnOptions"/> 
+                                             
+                                            <br/>
+                                            <p:commandButton 
+                                                value="Quitar" 
+                                                style="width: 120px;"
+                                                id="IdBtnRemove" 
+                                                icon="ui-icon-arrowthick-1-w"                                            
+                                                disabled="#{indicatorsCountMB.btnRemoveVariableDisabled}"
+                                                actionListener="#{indicatorsCountMB.removeVariableClick}"  
+                                                update="IdSelectOneListVariables IdSelectOneListCrossVariables IdBtnRemove IdBtnAdd IdBtnOptions"/> 
+                                            
+                                            <br/>
+                                            <p:commandButton
+                                                value="Configuraciones" 
+                                                style="width: 120px;"
+                                                id="IdBtnOptions" 
+                                                icon="ui-icon-wrench"
+                                                disabled="#{indicatorsCountMB.btnRemoveVariableDisabled}"
+                                                actionListener="#{indicatorsCountMB.btnLoadConfigurationClick}"
+                                                oncomplete="configurationsDialog.show();"
+                                                update="IdSelectOneListVariables  IdSelectOneListCrossVariables IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                            
+                                        </p:column>
+                                        <p:column>
+                                            <h:selectManyListbox 
+                                                id="IdSelectOneListCrossVariables" 
+                                                value="#{indicatorsCountMB.currentVariablesCrossSelected}"
+                                                style="height:110px; width: 200px;"
+                                                converterMessage="Fallo de comunicación, por favor intente nuevamente.">
+                                                <f:selectItems value="#{indicatorsCountMB.variablesCrossList}"/>                                                            
+                                                <f:ajax 
+                                                    event="change"                                                                                                           
+                                                    listener="#{indicatorsCountMB.changeCrossVariable}" 
+                                                    render="IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                                <f:ajax 
+                                                    event="dblclick"
+                                                    listener="#{indicatorsCountMB.removeVariableClick}"                                                    
+                                                    render="IdSelectOneListVariables IdSelectOneListCrossVariables IdBtnRemove IdBtnAdd IdBtnOptions"/>
+                                            </h:selectManyListbox> 
+
+                                        </p:column>
+                                    </p:row>
+
+                                </p:panelGrid>
+                                <br/>
+                                
+                                
+                            </p:tab>
+                            
+                            <p:tab title="Mapa">
+                                
+                            </p:tab>
+                            
+                        </p:tabView>
+
+                        <p:commandButton 
+                            value="Reiniciar" 
+                            style="width: 100px;"
+                            id="IdBtnReset" 
+                            action="indicator"
+                            actionListener="#{indicatorsCountMB.reset}"  
+                            ajax="false"/> 
+                        <p:commandButton 
+                            value="Generar mapa" 
+                            style="width: 100px;"
+                            id="IdBtnGenerate" 
+                            actionListener="#{indicatorsCountMB.processAddressCountIndicators()}"
+                            oncomplete="showTableResult(); pageActive();"  
+                            onclick="pageInactive();"                                                        
+                            update=":formInjuries:panelMap :formInjuries:msg1"/>
+
+                        <h:selectBooleanCheckbox value="#{indicatorsCountMB.showEmpty}" />
+                        Ver vacios
+                        <p:commandButton
+                            id="IdPaint"
+                            value="paint"
+                            actionListener="#{indicatorsCountMB.showMessage}"
+                            update=""                                                                                                    
+                            style="display: none;">
+                            <f:ajax 
+                                event="blur"
+                                listener="#{indicatorsCountMB.createImage}"
+                                render="IdImageChart IdDataTableHtml"/>
+                        </p:commandButton>
+                        
+                    </p:fieldset>
+                    <p:fieldset legend="ANALISIS ESTADISTICO">
+
+                        <p:inputText id="txtCoordinates" 
+                                     
+                                     style="width: 380px;"
+                                     />
+                        <p:commandButton value="Generar grafico"
+                                         
+                                         update="formInjuries:panelChart formInjuries:msg1"
+
+                                         />
+
+                        <p:outputPanel id="panelChart">
+                            <div id="fatalInjuriesChart" style="min-width: 310px; height: 400px; margin: 0 auto;"></div>
+                            
+                        </p:outputPanel>
+                    </p:fieldset>
+
+                </p:layoutUnit>
+
+            </ui:define>
+
+        </ui:composition>
+            
+        
+    </body>
+</html>

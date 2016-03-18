@@ -57,6 +57,9 @@ public class LoginMB {
     private boolean permissionVif = false;
     private boolean permissionIndicators = false;
     private boolean permissionAdministrator = false;
+    
+    private boolean isGeocoderInvitedUser = false;
+    
     StringEncryption stringEncryption = new StringEncryption();
     private boolean permissionRegistryDataSection = true;
     FacesContext context;
@@ -159,6 +162,9 @@ public class LoginMB {
      * on for the activity of a user.
      */
     public void reset() {
+        
+        isGeocoderInvitedUser = false;
+        
         projectsMB.reset();
         relationshipOfVariablesMB.reset();
         relationshipOfValuesMB.reset();
@@ -303,7 +309,12 @@ public class LoginMB {
 
             FacesMessage msg = new FacesMessage(FacesMessage.SEVERITY_INFO, "Correcto!!", "Se ha ingresado al sistema");
             FacesContext.getCurrentInstance().addMessage(null, msg);
-            return "homePage";
+            
+            if (isGeocoderInvitedUser){
+                return "geocoderHomePage";
+            }else{
+                return "homePage";
+            }
         } else {
             FacesMessage msg2 = new FacesMessage(FacesMessage.SEVERITY_ERROR, "ERROR", "Se debe crear una conexión");
             FacesContext.getCurrentInstance().addMessage(null, msg2);
@@ -345,7 +356,11 @@ public class LoginMB {
         idSession = session.getId();
 
         if (applicationControlMB.findIdSession(idSession)) {//ya existe esta sesion solo se ingresa a la aplicacion
-            return "homePage";
+            if (isGeocoderInvitedUser){
+                return "geocoderHomePage";
+            }else{
+                return "homePage";
+            }
         } else {//no existe sesion se debe crear el usuario temporal         
             int max = applicationControlMB.getMaxUserId();
             if (max < 1001) {
@@ -364,7 +379,19 @@ public class LoginMB {
             return inicializeVariables();
         }
     }
-
+    
+    
+    /**
+    *   FUNCION QUE CREA UN USUARIO INVITADO PARA INGRESAR AL GEOCODER
+    *   @return
+    */
+    public String checkValidInvitedForGeocoder() {
+    
+        isGeocoderInvitedUser = true;
+        return CheckValidInvited();
+        
+    }
+    
     /**
      * This method checks if the user is registered in the database and if your
      * account is still active, for to allow access to the system.
