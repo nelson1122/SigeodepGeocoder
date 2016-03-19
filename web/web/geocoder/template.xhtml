@@ -21,49 +21,24 @@
     <h:body>
         <h:form id="formInjuries">
             <p:growl showDetail="false" id="msg1"/>
+            
+            <p:toolbar>
+                
+                <p:toolbarGroup align="left">
+                    
+                    <p:menuButton value="Direcciones">
+                        <p:menuitem value="Busqueda" action="addressGeocoding" />
+                    </p:menuButton>
+                    <p:menuButton value="Lesiones de Causa Externa">
+                        <p:menuitem value="Fatales" action="fatalInjuries" />
+                        <p:menuitem value="No fatales" action="nonFatalInjuries" />
+                    </p:menuButton>
+                
+                </p:toolbarGroup>
+                
+            </p:toolbar>
             <p:layout style="height: 640px" >
-                <p:layoutUnit position="west" collapsible="true" header="&#160;" size="17%">
-                    
-                    <h:outputLink value="http://localhost:8080/georeferenced_injuriesv2">
-                        <h:graphicImage id="logo" name="img/banner.jpg" />
-                        
-                    </h:outputLink>
-                    
-                    
-                    
-                    <p:accordionPanel multiple="false" >
-
-                        <p:tab title="MENU">
-                            <p:menu style="width: 200px; margin-left: -20px; margin-top: 0px;">
-                                
-                                <p:submenu label="DIRECCIONES">
-                                    <p:menuitem 
-                                        icon="ui-icon-copy"
-                                        value="Busqueda" 
-                                        action="addressGeocoding"
-                                        ajax="false"
-                                        />
-                                </p:submenu>
-
-                                <p:submenu label="LESIONES CAUSA EXTERNA">
-                                    <p:menuitem 
-                                        icon="ui-icon-copy"
-                                        value="Fatales" 
-                                        action="fatalInjuries"
-                                        ajax="false"/>
-                                    <p:menuitem 
-                                        icon="ui-icon-copy"
-                                        value="No Fatales" 
-                                        action="nonFatalInjuries"
-                                        ajax="false"/>
-                                </p:submenu>
-                                
-                            </p:menu>
-                        </p:tab>
-
-                    </p:accordionPanel>
-                </p:layoutUnit>
-
+                
                 <p:layoutUnit position="center">
                     <ui:insert name="centerPanel">
                     </ui:insert>
